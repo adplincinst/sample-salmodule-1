@@ -47,6 +47,8 @@ def ontology():
             {
                 "@id": "GeoconnexReferenceFeatureStates",
                 "@type": "owl:Class",
+                "rdfs:label": "Geoconnex U.S. States Reference Features",
+                "rdfs:comment": "Feteches the states from Geoconnex reference feature in Geoconnex.",
                 "rdfs:subClassOf": {"@id": "salmodule:Task"},
                 "salmodule:output": {
                     "@type": "sh:NodeShape",
