@@ -8,7 +8,6 @@ import json
 import sys
 import os
 
-
 # 1. Top-level main CLI group
 @click.group()
 def cli():
@@ -18,13 +17,13 @@ def cli():
 # 2. 'salmodule' group nested under the main CLI
 @cli.group("salmodule")
 def salmodule():
-    """Manage and execute salmodule tasks."""
+    """Implements the salmodule (CLI) specification"""
     pass
 
 # 3. 'ontology' subcommand nested under 'salmodule'
 @salmodule.command("ontology")
 def ontology():
-    """Print the sample-sal-module ontology."""
+    """Print the sample-sal-module-1 ontology."""
     onto = {
         "@context": {
             "schema": "http://schema.org/",
@@ -104,20 +103,23 @@ def ontology():
 
 @salmodule.command("run")
 def run():
-    """Execute the salmodule routine."""
+    """Execute the salmodule:Task subclass instance set in SALMODULE_TASK_INSTANCE env"""
+    task_instance = get_salmodule_task_instance()
+    salmodule_task_2_handler(task_instance['@type'])(task_instance)
 
-    config = get_salmodule_task_instance()
 
-    # get instance id
-    instance_id = config['@id']
-    # get max retries 
+def geoconnex_reference_feature_states(task_instance):
+    """salmodule:Task implementation"""
+ 
+    # get maxRetries property value as per the salmodule:self NodeShape definition for this task instance
     max_retries=0
-    if isinstance(config['maxRetries'],dict):
-        max_retries=int(config['maxRetries']['@value'])
+    if isinstance(task_instance['maxRetries'],dict):
+        max_retries=int(task_instance['maxRetries']['@value']) # datatype rendered as a object. Get the @value 
     else:
-        max_retries = int(config['maxRetries'])
+        max_retries = int(task_instance['maxRetries']) # datatype is a literal 
 
     states_items_url = "https://reference.geoconnex.us/collections/states/items"
+
     for i in range(max_retries):
         try:
             r = requests.get(states_items_url,headers={"Accept": "application/ld+json"})
@@ -134,7 +136,7 @@ def run():
                 sys.exit(1)
                       
 def print_states_jsonld(state_pid,max_retries):
-    #print(state_pid)
+    """Fetch state from reference feature server identified by state_pid and print to stdout"""
     for i in range(max_retries):
         try:
             r = requests.get(state_pid, headers={"Accept": "application/ld+json"})
@@ -154,7 +156,7 @@ def print_states_jsonld(state_pid,max_retries):
                 continue
 
 def print_err_msg(msg):
-
+    """Print an error message as a JSON object to stdout in conformance to salmodule:output SHACL Shape annotation for salmodule:Task base class"""
     err_msg = {
         "@type": "salmodule:Error",
         "rdfs:comment": msg
@@ -163,6 +165,7 @@ def print_err_msg(msg):
     print( json.dumps(err_msg))
 
 def get_salmodule_task_instance():
+    """Retrieve the SAL Module task instance from the environment variable SALMODULE_TASK_INSTANCE and return it as a dictionary."""
     task_inst = os.environ.get("SALMODULE_TASK_INSTANCE")
     if not task_inst:
         print_err_msg("SALMODULE_TASK_INSTANCE environment variable is not set.")
@@ -171,6 +174,23 @@ def get_salmodule_task_instance():
     task_inst_dict = json.loads(task_inst)
 
     return task_inst_dict
+
+def salmodule_task_2_handler(task_name):
+    """resolve task name (salmodule:Task subclass) to corresponding handler function."""
+
+    #  Below assumes that SAL abides by @context terms as set forth in a SAL Module's ontology
+    #  In the ontology definition (see def ontology()) the task @type is set to a relative path (i.e. just the class Type no ns prefix)
+    #  SAL Modules can expect that all json uses keys corresponding to resolvable terms in the ontology's @context.
+     
+    salmodule_tasks = {
+        "GeoconnexReferenceFeatureStates":  geoconnex_reference_feature_states
+    }
+    if task_name not in salmodule_tasks:
+        print_err_msg(f"Task subclass '{task_name}' is not recognized.")
+        sys.exit(1)
+
+    
+    return salmodule_tasks[task_name]
 
 if __name__ == "__main__":
     cli()
