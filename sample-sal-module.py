@@ -48,7 +48,7 @@ def ontology():
                 "@id": "GeoconnexReferenceFeatureStates",
                 "@type": "owl:Class",
                 "rdfs:subClassOf": {"@id": "salmodule:Task"},
-                "salmodulle:output": {
+                "salmodule:output": {
                     "@type": "sh:NodeShape",
                     "sh:targetClass": {"@id": "schema:Place"},
                     "sh:property": [
